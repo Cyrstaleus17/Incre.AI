@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IncreAI - V6 Text Clarity Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load OpenCV.js -->
+    <script
+      async
+      src="https://docs.opencv.org/4.x/opencv.js"
+      onload="onOpenCvReady();"
+    ></script>
+    <style>
+      /* Using Google Fonts for a cleaner look */
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap");
+      body {
+        font-family: "Inter", sans-serif;
+        --tw-bg-opacity: 1;
+        background-color: rgb(17 24 39 / var(--tw-bg-opacity)); /* bg-gray-900 */
+        overflow-x: hidden;
+      }
+      /* Custom loader animation */
+      .loader {
+        border: 6px solid #4a5568; /* border-gray-600 */
+        border-top: 6px solid #4299e1; /* border-blue-400 */
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      /* Simple fade-in animation for elements */
+      .fade-in {
+        animation: fadeInAnimation 0.5s ease-in-out forwards;
+      }
+      @keyframes fadeInAnimation {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      /* Glowing effect for when processing is active */
+      .processing-glow {
+        animation: glow 1.5s ease-in-out infinite alternate;
+      }
+      @keyframes glow {
+        from { box-shadow: 0 0 8px #3b82f6, 0 0 12px #3b82f6; }
+        to { box-shadow: 0 0 25px #60a5fa, 0 0 35px #60a5fa; }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-900 text-gray-300">
+    <div class="container mx-auto p-4 md:p-8">
+      <header class="text-center mb-8 fade-in">
+        <h1 class="text-4xl md:text-5xl font-black text-white">
+          IncreAI - Text Clarity Engine
+        </h1>
+        <p class="text-lg text-gray-400 mt-2">
+          Intelligently enhances photos and clarifies text in documents.
+        </p>
+      </header>
+
+      <!-- Loading indicator for OpenCV -->
+      <div
+        id="loader-container"
+        class="flex flex-col items-center justify-center p-8 bg-gray-800 rounded-lg shadow-lg"
+      >
+        <div class="loader"></div>
+        <p id="loader-text" class="mt-4 text-gray-400">
+          Loading AI Vision Engine (OpenCV.js)...
+        </p>
+      </div>
+
+      <main id="app-container" class="hidden">
+        <!-- Step 1: Upload Section -->
+        <div id="upload-section" class="max-w-lg mx-auto bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl p-6 mb-8 text-center transition-all duration-300 ease-in-out hover:shadow-blue-500/20 fade-in">
+             <label for="image-upload" class="inline-flex items-center justify-center bg-gray-700 text-gray-300 font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-600 transition-all duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                Choose File
+            </label>
+            <input type="file" id="image-upload" class="hidden" accept="image/png, image/jpeg">
+            <p id="file-name-display" class="text-gray-400 mt-3 text-sm h-5"></p>
+            <button id="enhance-btn" class="hidden mt-4 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed">
+              Enhance Image
+            </button>
+        </div>
+        
+        <!-- Step 2: Image Previews -->
+        <div id="image-previews" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 hidden">
+            <div id="original-card" class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl p-4 flex flex-col items-center transition-all duration-300 ease-in-out hover:shadow-indigo-500/20">
+                <h2 class="text-xl font-bold mb-4 text-white">Original Image</h2>
+                <canvas id="original-canvas" class="w-full h-auto rounded-md border-2 border-gray-700"></canvas>
+            </div>
+            <div id="enhanced-card" class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl p-4 flex flex-col items-center transition-all duration-300 ease-in-out hover:shadow-green-500/20">
+                <h2 class="text-xl font-bold mb-4 text-white">Enhanced Image</h2>
+                <canvas id="enhanced-canvas" class="w-full h-auto rounded-md border-2 border-gray-700"></canvas>
+            </div>
+        </div>
+
+        <!-- Step 3: Logs and Download Section -->
+        <div id="results-section" class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl shadow-2xl p-6 transition-all duration-300 ease-in-out hidden">
+          <h2 class="text-xl font-bold mb-4 text-white text-center">AI Analysis & Processing Log</h2>
+          <div id="log-output" class="bg-black/50 text-gray-300 font-mono text-sm p-4 rounded-md h-48 overflow-y-auto border border-gray-700 mb-6">
+          </div>
+           <h2 class="text-xl font-bold mb-4 text-white text-center">Download Enhanced Image</h2>
+          <div id="download-controls" class="flex flex-col md:flex-row gap-4 items-center justify-center">
+              <input type="text" id="file-name-input" class="w-full md:w-auto flex-grow bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter new file name...">
+              <a id="download-btn" class="w-full md:w-auto text-center bg-green-600 text-white font-bold py-2 px-8 rounded-lg shadow-lg hover:bg-green-700 transition-all duration-300 ease-in-out transform hover:scale-105">
+                Download
+              </a>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // --- DOM Elements ---
+      const loaderContainer = document.getElementById("loader-container");
+      const loaderText = document.getElementById("loader-text");
+      const appContainer = document.getElementById("app-container");
+      const imageUpload = document.getElementById("image-upload");
+      const enhanceBtn = document.getElementById("enhance-btn");
+      const fileNameDisplay = document.getElementById("file-name-display");
+      const imagePreviews = document.getElementById("image-previews");
+      const originalCanvas = document.getElementById("original-canvas");
+      const enhancedCanvas = document.getElementById("enhanced-canvas");
+      const originalCard = document.getElementById("original-card");
+      const enhancedCard = document.getElementById("enhanced-card");
+      const resultsSection = document.getElementById("results-section");
+      const logOutput = document.getElementById("log-output");
+      const fileNameInput = document.getElementById("file-name-input");
+      const downloadBtn = document.getElementById("download-btn");
+      
+      let originalImage = null;
+      let originalFileName = "image.png";
+      
+      // --- App Initialization ---
+      function onOpenCvReady() {
+        loaderText.textContent = "AI Engine Loaded Successfully!";
+        setTimeout(() => {
+          loaderContainer.classList.add("hidden");
+          appContainer.classList.remove("hidden");
+        }, 1000);
+      }
+
+      function log(message) {
+        const p = document.createElement("p");
+        p.innerHTML = `&gt; ${message}`;
+        logOutput.appendChild(p);
+        logOutput.scrollTop = logOutput.scrollHeight;
+      }
+      
+      // --- Image Loading ---
+      imageUpload.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          originalFileName = file.name;
+          fileNameDisplay.textContent = file.name;
+          enhanceBtn.classList.remove("hidden");
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => { originalImage = img; };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      
+      // --- Main Enhancement Logic ---
+      enhanceBtn.addEventListener("click", () => {
+        if (!originalImage || !cv) {
+          log("Error: Image or OpenCV not ready.");
+          return;
+        }
+
+        // --- UI Setup for Processing ---
+        enhanceBtn.disabled = true;
+        enhanceBtn.textContent = "Enhancing...";
+        resultsSection.classList.add("hidden");
+        logOutput.innerHTML = "";
+        showImagePreviews(originalImage);
+        enhancedCard.classList.add("processing-glow");
+
+
+        // --- Start Processing ---
+        setTimeout(() => {
+          try {
+            let src = cv.imread(originalCanvas);
+            let enhancedImage = src.clone();
+
+            log('<strong>Step 1: Analyzing image characteristics...</strong>');
+            const analysis = analyzeImage(src);
+            log(`- Sharpness Score: <span class="text-cyan-400">${analysis.sharpness.toFixed(2)}</span> (Low values indicate blur)`);
+            log(`- Noise Level: <span class="text-red-400">${analysis.noise.toFixed(2)}</span> (High values indicate grainy noise)`);
+            log(`- Text Detected: <span class="text-teal-400">${analysis.has_text}</span>`);
+            
+            const isHighQuality = !analysis.is_blurry && !analysis.is_noisy && !analysis.is_low_contrast && !analysis.is_dull;
+            if(isHighQuality && !analysis.has_text) {
+                log('<span class="text-gray-400">- Image quality is good, applying subtle enhancements.</span>');
+            }
+
+            log('<strong>Step 2: Building dynamic enhancement pipeline...</strong>');
+            
+            if (enhancedImage.rows < 1280 || enhancedImage.cols < 1280) {
+                let upscaledImage = intelligentUpscale(enhancedImage, 2);
+                enhancedImage.delete(); 
+                enhancedImage = upscaledImage;
+            }
+
+            // --- NEW: Text Clarity Engine ---
+            if (analysis.has_text) {
+                log("- <span class='text-teal-400 font-bold'>Text detected! Applying Text Clarity filter...</span>");
+                let textEnhanced = enhanceText(enhancedImage);
+                enhancedImage.delete();
+                enhancedImage = textEnhanced;
+            } else {
+                // Run standard image enhancements only if it's not a text document
+                if (analysis.is_noisy) {
+                    const denoiseStrength = analysis.is_digital_art ? "Edge-Preserving" : "Intelligent Denoising";
+                    log(`- Applying ${denoiseStrength} filter to reduce noise.`);
+                    if (analysis.is_digital_art) {
+                        let temp = new cv.Mat();
+                        cv.bilateralFilter(enhancedImage, temp, 7, 35, 35, cv.BORDER_DEFAULT);
+                        enhancedImage.delete();
+                        enhancedImage = temp;
+                    } else {
+                        let temp = new cv.Mat();
+                        cv.fastNlMeansDenoisingColored(enhancedImage, temp, 7, 7, 7, 21);
+                        enhancedImage.delete();
+                        enhancedImage = temp;
+                    }
+                }
+
+                if (analysis.is_blurry) {
+                    log("- <span class='text-orange-400'>Applying Unsharp Mask (Strength: 1.5) to correct blur.</span>");
+                    let sharpened = applyUnsharpMask(enhancedImage, 1.5, 1.5);
+                    enhancedImage.delete();
+                    enhancedImage = sharpened;
+                } else if (analysis.sharpness < 250) {
+                    log("- Applying a subtle sharpening filter to enhance details.");
+                    let kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0]);
+                    cv.filter2D(enhancedImage, enhancedImage, -1, kernel);
+                    kernel.delete();
+                }
+
+                if (analysis.is_low_contrast || analysis.is_dark || analysis.is_bright) {
+                    log("- Applying adaptive contrast (CLAHE) to balance light and shadows.");
+                    let lab = new cv.Mat();
+                    cv.cvtColor(enhancedImage, lab, cv.COLOR_RGB2Lab);
+                    let labPlanes = new cv.MatVector();
+                    cv.split(lab, labPlanes);
+                    let clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+                    let l = labPlanes.get(0);
+                    clahe.apply(l, l);
+                    cv.merge(labPlanes, enhancedImage);
+                    cv.cvtColor(enhancedImage, enhancedImage, cv.COLOR_Lab2RGB);
+                    lab.delete(); labPlanes.delete(); l.delete(); clahe.delete();
+                }
+
+                if (analysis.is_dull) {
+                    log("- Boosting color saturation by 20% to make colors more vibrant.");
+                    let hsv = new cv.Mat();
+                    cv.cvtColor(enhancedImage, hsv, cv.COLOR_RGB2HSV);
+                    let hsvPlanes = new cv.MatVector();
+                    cv.split(hsv, hsvPlanes);
+                    let s = hsvPlanes.get(1);
+                    cv.convertScaleAbs(s, s, 1.2, 0);
+                    cv.merge(hsvPlanes, hsv);
+                    cv.cvtColor(hsv, enhancedImage, cv.COLOR_HSV2RGB);
+                    hsv.delete(); hsvPlanes.delete(); s.delete();
+                }
+            }
+
+            log('<strong>Step 3: Rendering final image...</strong>');
+            cv.imshow(enhancedCanvas, enhancedImage);
+            
+            src.delete();
+            enhancedImage.delete();
+            finalizeEnhancement();
+          } catch (error) {
+            log(`<span class="text-red-500">An error occurred: ${error.message}</span>`);
+            finalizeEnhancement(true);
+          }
+        }, 50);
+      });
+
+      function finalizeEnhancement(error = false) {
+        if (!error) {
+          log('<span class="text-green-500 font-bold">Enhancement complete!</span>');
+          resultsSection.classList.remove("hidden");
+          resultsSection.classList.add("fade-in");
+          
+          const parts = originalFileName.split(".");
+          const ext = parts.pop();
+          const name = parts.join(".");
+          fileNameInput.value = `${name}-enhanced.png`;
+          updateDownloadLink();
+        }
+        enhanceBtn.disabled = false;
+        enhanceBtn.textContent = "Enhance Image";
+        enhancedCard.classList.remove("processing-glow");
+      }
+      
+      // --- UI and Helper Functions ---
+      function showImagePreviews(originalImg) {
+        imagePreviews.classList.remove("hidden");
+        imagePreviews.classList.add("fade-in");
+        
+        const originalCtx = originalCanvas.getContext('2d');
+        originalCanvas.width = originalImg.width;
+        originalCanvas.height = originalImg.height;
+        originalCtx.drawImage(originalImg, 0, 0);
+
+        const enhancedCtx = enhancedCanvas.getContext('2d');
+        enhancedCanvas.width = originalImg.width;
+        enhancedCanvas.height = originalImg.height;
+        enhancedCtx.fillStyle = "#111827"; 
+        enhancedCtx.fillRect(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+      }
+      
+      fileNameInput.addEventListener('input', updateDownloadLink);
+      function updateDownloadLink() {
+         downloadBtn.href = enhancedCanvas.toDataURL("image/png");
+         downloadBtn.download = fileNameInput.value || 'enhanced-image.png';
+      }
+
+      // --- Image Analysis and Processing Functions ---
+
+      function intelligentUpscale(src, scaleFactor = 2) {
+        log(`- <span class="text-purple-400">Applying Intelligent Upscaling (x${scaleFactor}) with detail restoration...</span>`);
+        
+        let dsize = new cv.Size(src.cols * scaleFactor, src.rows * scaleFactor);
+        let upscaled = new cv.Mat();
+        cv.resize(src, upscaled, dsize, 0, 0, cv.INTER_LANCZOS4);
+        let sharpened = applyUnsharpMask(upscaled, 0.8, 0.8);
+        
+        upscaled.delete();
+        return sharpened;
+      }
+
+      function enhanceText(src) {
+        let gray = new cv.Mat();
+        let binarized = new cv.Mat();
+        let final = new cv.Mat();
+        
+        // 1. Convert to grayscale for thresholding
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        
+        // 2. Adaptive thresholding to handle different lighting conditions
+        cv.adaptiveThreshold(gray, binarized, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 4);
+        
+        // 3. Convert back to a color image to be displayed
+        cv.cvtColor(binarized, final, cv.COLOR_GRAY2RGBA);
+        
+        gray.delete();
+        binarized.delete();
+        return final;
+      }
+
+      function analyzeImage(src) {
+        const gray = new cv.Mat(); cv.cvtColor(src, gray, cv.COLOR_RGB2GRAY);
+        const hsv = new cv.Mat(); cv.cvtColor(src, hsv, cv.COLOR_RGB2HSV);
+
+        let hsvPlanes = new cv.MatVector(); cv.split(hsv, hsvPlanes);
+        const brightness = cv.mean(hsvPlanes.get(2))[0];
+        const saturation = cv.mean(hsvPlanes.get(1))[0];
+
+        let laplacian = new cv.Mat(); cv.Laplacian(gray, laplacian, cv.CV_64F);
+        let meanLap = new cv.Mat(), stdDevLap = new cv.Mat();
+        cv.meanStdDev(laplacian, meanLap, stdDevLap);
+        const sharpness = stdDevLap.data64F[0] ** 2;
+
+        let meanGray = new cv.Mat(), stdDevGray = new cv.Mat();
+        cv.meanStdDev(gray, meanGray, stdDevGray);
+        const contrast = stdDevGray.data64F[0];
+
+        let blurred = new cv.Mat(); cv.medianBlur(gray, blurred, 3);
+        let diff = new cv.Mat(); cv.absdiff(gray, blurred, diff);
+        let meanDiff = new cv.Mat(), stdDevDiff = new cv.Mat();
+        cv.meanStdDev(diff, meanDiff, stdDevDiff);
+        const noise = stdDevDiff.data64F[0];
+        
+        // --- Heuristic Text Detection ---
+        let has_text = false;
+        // High contrast and high sharpness are good indicators of text
+        if (contrast > 60 && sharpness > 200) {
+            has_text = true;
+        }
+
+        const is_blurry = sharpness < 80;
+        const is_noisy = noise > 8;
+        const is_low_contrast = contrast < 40;
+        const is_dull = saturation < 85;
+        const is_dark = brightness < 70;
+        const is_bright = brightness > 185;
+        const is_digital_art = !is_noisy && sharpness > 150 && contrast > 50;
+
+        [gray, hsv, hsvPlanes, laplacian, meanLap, stdDevLap, meanGray, stdDevGray, blurred, diff, meanDiff, stdDevDiff].forEach(mat => mat.delete());
+
+        return { brightness, saturation, sharpness, contrast, noise, is_blurry, is_noisy, is_low_contrast, is_dull, is_dark, is_bright, is_digital_art, has_text };
+      }
+
+      function applyUnsharpMask(src, sigma, strength) {
+          let blurred = new cv.Mat();
+          let dst = new cv.Mat();
+          cv.GaussianBlur(src, blurred, new cv.Size(0, 0), sigma, sigma, cv.BORDER_DEFAULT);
+          cv.addWeighted(src, 1 + strength, blurred, -strength, 0, dst);
+          blurred.delete();
+          return dst;
+      }
+    </script>
+  </body>
+</html>
+
