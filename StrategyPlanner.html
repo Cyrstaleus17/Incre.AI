@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JEE Mains 2026 - Strategy Planner</title>
+    
+    <!-- Robust Favicon (SVG Data URI) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>" />
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Icons (FontAwesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ["Outfit", "sans-serif"] },
+                    colors: {
+                        brand: {
+                            dark: "#020617",
+                            card: "rgba(30, 41, 59, 0.7)",
+                            border: "rgba(255, 255, 255, 0.1)",
+                        }
+                    },
+                    animation: {
+                        'blob': "blob 20s infinite",
+                        'slide-up': "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                        'pulse-glow': "pulseGlow 2s infinite",
+                    },
+                    keyframes: {
+                        blob: {
+                            "0%": { transform: "translate(0px, 0px) scale(1)" },
+                            "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                            "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                            "100%": { transform: "translate(0px, 0px) scale(1)" },
+                        },
+                        slideUp: {
+                            "0%": { opacity: "0", transform: "translateY(20px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" },
+                        },
+                        pulseGlow: {
+                            "0%, 100%": { opacity: "1" },
+                            "50%": { opacity: "0.5" }
+                        }
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        body {
+            background-color: #020617;
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        .glass-btn:active { transform: scale(0.95); }
+        .glass-btn:focus-visible {
+            outline: 2px solid #6366f1;
+            outline-offset: 2px;
+        }
+
+        /* Custom Checkbox Animation */
+        .custom-checkbox input:checked + div {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .custom-checkbox div svg {
+            transform: scale(0);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .custom-checkbox input:checked + div svg {
+            transform: scale(1);
+        }
+        .custom-checkbox input:focus-visible + div {
+            box-shadow: 0 0 0 2px #020617, 0 0 0 4px #6366f1;
+        }
+
+        /* Accordion Animation */
+        .accordion-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease-out;
+        }
+        .accordion-content.open { grid-template-rows: 1fr; }
+        .accordion-inner { overflow: hidden; }
+
+        /* Toast */
+        .toast-enter { animation: slideUp 0.3s forwards; }
+        .toast-exit { opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+        
+        /* High Yield Badge Glow */
+        .glow-text { text-shadow: 0 0 10px rgba(234, 179, 8, 0.3); }
+    </style>
+</head>
+<body class="selection:bg-indigo-500/30 selection:text-indigo-200">
+
+    <!-- Ambient Background -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[100px] animate-blob mix-blend-screen"></div>
+        <div class="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-fuchsia-600/20 rounded-full blur-[100px] animate-blob mix-blend-screen" style="animation-delay: 2s"></div>
+        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
+    </div>
+
+    <div id="app" class="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        
+        <!-- Header -->
+        <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 mb-12">
+            <div class="space-y-2">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span> JEE 2026 Protocol
+                </div>
+                <h1 class="text-4xl md:text-6xl font-black tracking-tight text-white leading-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">190+ Strategy</span>
+                    Planner
+                </h1>
+                <p class="text-slate-400 text-lg max-w-2xl">The synthesized high-yield path to securing a top rank. Track your progress, manage your time, and conquer the syllabus.</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+                <!-- Countdown -->
+                <button id="countdown-btn" class="glass-panel px-6 py-3 rounded-2xl flex items-center gap-4 hover:bg-white/5 transition-colors group text-left w-full sm:w-auto">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-clock text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 group-hover:text-indigo-300 transition-colors">Target Date</div>
+                        <div id="header-countdown" class="text-2xl font-bold font-mono text-white leading-none mt-1">--d --h</div>
+                    </div>
+                </button>
+
+                <!-- Actions -->
+                <div class="flex gap-2">
+                    <button id="btn-export" class="glass-btn flex-1 sm:w-14 h-auto rounded-2xl flex items-center justify-center text-indigo-300 text-xl" title="Export Data" aria-label="Export Data">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    
+                    <label class="glass-btn flex-1 sm:w-14 h-auto rounded-2xl flex items-center justify-center text-emerald-300 text-xl cursor-pointer" title="Import Data">
+                        <input type="file" id="file-import" class="hidden" accept=".json">
+                        <i class="fas fa-upload"></i>
+                    </label>
+
+                    <button id="btn-reset" class="glass-btn flex-1 sm:w-14 h-auto rounded-2xl flex items-center justify-center text-rose-300 text-xl" title="Reset Data" aria-label="Reset Data">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
+            
+            <!-- Main Progress Circle -->
+            <div class="glass-panel rounded-3xl p-8 lg:col-span-4 relative overflow-hidden group">
+                <div class="absolute -right-10 -top-10 text-[10rem] text-white/5 group-hover:text-white/10 transition-colors pointer-events-none select-none">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                
+                <div class="relative z-10">
+                    <h3 class="text-slate-400 font-bold uppercase text-xs tracking-widest mb-2">Total Syllabus Coverage</h3>
+                    <div class="flex items-baseline gap-3 mb-6">
+                        <span id="stat-total-percent" class="text-6xl font-black text-white tracking-tighter">0%</span>
+                        <span id="stat-total-ratio" class="text-sm font-medium text-slate-500 bg-slate-800/50 px-3 py-1 rounded-full border border-white/5">0/0 Chapters</span>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="h-4 w-full bg-slate-800/80 rounded-full overflow-hidden p-0.5 box-border border border-white/5">
+                        <div id="bar-total" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_20px_rgba(99,102,241,0.5)]" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Cards -->
+            <div class="glass-panel rounded-3xl p-8 lg:col-span-8 flex flex-col justify-center gap-6">
+                <!-- Physics -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-end">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                                <i class="fas fa-atom"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white">Physics</h4>
+                                <p class="text-xs text-slate-500">Target: 80+ Marks</p>
+                            </div>
+                        </div>
+                        <span id="stat-phy" class="text-lg font-bold text-blue-400">0%</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div id="bar-phy" class="h-full bg-blue-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Chemistry -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-end">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                <i class="fas fa-flask"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white">Chemistry</h4>
+                                <p class="text-xs text-slate-500">Target: 70+ Marks</p>
+                            </div>
+                        </div>
+                        <span id="stat-chem" class="text-lg font-bold text-emerald-400">0%</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div id="bar-chem" class="h-full bg-emerald-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Math -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-end">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400">
+                                <i class="fas fa-square-root-variable"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white">Mathematics</h4>
+                                <p class="text-xs text-slate-500">Target: 40+ Marks</p>
+                            </div>
+                        </div>
+                        <span id="stat-math" class="text-lg font-bold text-rose-400">0%</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div id="bar-math" class="h-full bg-rose-500 rounded-full transition-all duration-700" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resource Link -->
+        <a href="https://youtube.com/playlist?list=PLOWepj0YNcOJTrXfaJtJnmrwOoKEkICrj&si=28lzt90TUcnj6C2D" target="_blank" rel="noopener noreferrer"
+           class="glass-panel p-5 rounded-2xl mb-12 flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer border-l-4 border-l-red-500 shadow-lg">
+            <div class="flex items-center gap-5">
+                <div class="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(220,38,38,0.5)] group-hover:scale-110 transition-transform">
+                    <i class="fab fa-youtube"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-white group-hover:text-red-400 transition-colors">Strategic Video Resources</h3>
+                    <p class="text-sm text-slate-400">Curated playlist for these high-yield topics.</p>
+                </div>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-red-500 group-hover:text-white transition-all">
+                <i class="fas fa-external-link-alt"></i>
+            </div>
+        </a>
+
+        <!-- Timeline Container -->
+        <div id="timeline-container" class="space-y-6 pb-24">
+            <!-- Timeline items injected here via JS -->
+        </div>
+
+    </div>
+
+    <!-- Calendar Modal -->
+    <div id="modal-calendar" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity opacity-0" id="modal-backdrop"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="glass-panel w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl bg-[#0f172a] transform scale-95 opacity-0 transition-all duration-300" id="modal-content">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <div class="text-xs font-bold text-indigo-400 uppercase tracking-widest">Target Date</div>
+                            <h2 id="cal-title" class="text-2xl font-bold text-white">Month Year</h2>
+                        </div>
+                        <div class="flex gap-1">
+                            <button id="cal-prev" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300"><i class="fas fa-chevron-left"></i></button>
+                            <button id="cal-next" class="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-7 mb-2 text-center text-xs font-bold text-slate-500" id="cal-header">
+                        <!-- Days Header -->
+                    </div>
+                    <div class="grid grid-cols-7 gap-y-2 place-items-center" id="cal-grid">
+                        <!-- Days Grid -->
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-6 border-t border-white/5">
+                    <div id="cal-actions" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-white font-medium" id="cal-selected-text"></div>
+                            <span id="cal-badge" class="text-xs px-2 py-1 rounded font-bold"></span>
+                        </div>
+                        <button id="cal-save-btn" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/25">
+                            Set Deadline
+                        </button>
+                    </div>
+                    <div id="cal-empty" class="text-center text-slate-500 text-sm">
+                        Select a date to calculate days remaining.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="modal-confirm" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="glass-panel relative max-w-sm w-full rounded-2xl p-6 text-center transform scale-100 transition-all border-red-500/20">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-2xl mx-auto mb-4 animate-bounce">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Reset All Progress?</h3>
+            <p class="text-slate-400 mb-6 text-sm">This will permanently delete all your checkboxes and personal notes. You cannot undo this.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btn-cancel-reset" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors">Cancel</button>
+                <button id="btn-confirm-reset" class="py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-600/20">Yes, Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <script>
+        /**
+         * JEE Strategy Planner - Fixed & Optimized
+         */
+        
+        // --- DATA STRUCTURES ---
+        const CONSTANTS = {
+            STORAGE_KEY: 'jee2026_planner_v3_fixed',
+            DEFAULT_DATE: '2026-01-20T09:00:00', // Default approx date
+            MONTHS: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+            DAYS: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+        };
+
+        const DATA = [
+            { 
+                id: 'm-june', month: "June 2025", title: "The Rank Deciders (Highest Weightage)", phase: "Phase 1: Foundation", 
+                chapters: { Physics: ["Modern Physics"], Chemistry: ["Coordination Compounds", "GOC"], Mathematics: ["Vector Algebra", "3D Geometry"] } 
+            },
+            { 
+                id: 'm-july', month: "July 2025", title: "The Scoring Engines", 
+                chapters: { Physics: ["Current Electricity"], Chemistry: ["Chemical Bonding"], Mathematics: ["Matrices", "Determinants"] } 
+            },
+            { 
+                id: 'm-aug', month: "August 2025", title: "Concept Twins & Easy Marks", 
+                chapters: { Physics: ["Electrostatics", "Gravitation"], Chemistry: ["Electrochemistry"], Mathematics: ["Statistics"] } 
+            },
+            { 
+                id: 'm-sep', month: "September 2025", title: "Formula Heavy Weights", phase: "Phase 2: Core Scoring",
+                chapters: { Physics: ["Heat & Thermodynamics"], Chemistry: ["Thermodynamics"], Mathematics: ["Sequence & Series"] } 
+            },
+            { 
+                id: 'm-oct', month: "October 2025", title: "Visual & Numerical", 
+                chapters: { Physics: ["Ray & Wave Optics"], Chemistry: ["Chemical Kinetics", "Atomic Structure"], Mathematics: ["Binomial Theorem"] } 
+            },
+            { 
+                id: 'm-nov', month: "Nov 2025", title: "The Safety Net", phase: "Phase 3: The Buffer",
+                chapters: { Physics: ["Units & Measurements", "Semiconductors"], Chemistry: ["Periodic Table", "Biomolecules"], Mathematics: ["Definite Integration", "Differential Eq"] } 
+            },
+            { 
+                id: 'm-safe', month: "Safety Buffer", title: "Low Effort / High Security", phase: "Phase 4: Extra Security",
+                chapters: { Physics: ["Kinematics", "Work Power Energy"], Chemistry: ["Solutions", "Mole Concept", "Amines"], Mathematics: ["Probability", "Area Under Curve"] } 
+            },
+            { 
+                id: 'm-rev', month: "Dec 2025", title: "Revision Phase", isContent: true, 
+                content: "Intensive Revision of 'High Yield' formulas. Solve 2024 & 2025 PYQs specifically for these chapters." 
+            },
+            { 
+                id: 'm-final', month: "Jan 2026", title: "Final Lap", isContent: true, 
+                content: "Full Syllabus Mock Tests. Focus on Accuracy (Not Attempt Rate). 190+ Goal." 
+            }
+        ];
+
+        // --- APPLICATION CORE ---
+        const App = (() => {
+            // State
+            let state = {
+                progress: {}, // { "chapterId": true }
+                notes: {},    // { "monthId": "text" }
+                targetDate: new Date(CONSTANTS.DEFAULT_DATE).getTime()
+            };
+
+            // DOM Elements cache
+            const UI = {
+                timeline: document.getElementById('timeline-container'),
+                countdown: document.getElementById('header-countdown'),
+                stats: {
+                    total: document.getElementById('stat-total-percent'),
+                    ratio: document.getElementById('stat-total-ratio'),
+                    bar: document.getElementById('bar-total'),
+                    phy: document.getElementById('stat-phy'),
+                    barPhy: document.getElementById('bar-phy'),
+                    chem: document.getElementById('stat-chem'),
+                    barChem: document.getElementById('bar-chem'),
+                    math: document.getElementById('stat-math'),
+                    barMath: document.getElementById('bar-math'),
+                }
+            };
+
+            // --- Methods ---
+
+            function init() {
+                loadState();
+                renderTimeline();
+                updateStats();
+                startCountdown();
+                setupEventListeners();
+            }
+
+            function loadState() {
+                const saved = localStorage.getItem(CONSTANTS.STORAGE_KEY);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        // Merge parsed state with default structure to prevent errors if schema changes
+                        state = { ...state, ...parsed };
+                    } catch (e) {
+                        console.error("State load error", e);
+                        Toast.show("Error loading saved data", "error");
+                    }
+                }
+            }
+
+            function saveState() {
+                localStorage.setItem(CONSTANTS.STORAGE_KEY, JSON.stringify(state));
+                updateStats();
+            }
+
+            function generateId(monthId, subject, chapter) {
+                // Create a stable, safe ID string
+                const cleanSubject = subject.toLowerCase();
+                const cleanChapter = chapter.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                return `${monthId}_${cleanSubject}_${cleanChapter}`;
+            }
+
+            function renderTimeline() {
+                UI.timeline.innerHTML = '';
+                let lastPhase = null;
+
+                DATA.forEach((plan, index) => {
+                    // 1. Render Phase Separator
+                    if (plan.phase && plan.phase !== lastPhase) {
+                        lastPhase = plan.phase;
+                        const isSafety = plan.phase.includes("Extra");
+                        const colorClass = isSafety ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5" : "text-indigo-400 border-indigo-500/20 bg-indigo-500/5";
+                        
+                        const separator = document.createElement('div');
+                        separator.className = "flex items-center gap-4 py-6 opacity-80";
+                        separator.innerHTML = `
+                            <div class="h-px bg-white/10 flex-grow"></div>
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border ${colorClass}">${plan.phase}</span>
+                            <div class="h-px bg-white/10 flex-grow"></div>
+                        `;
+                        UI.timeline.appendChild(separator);
+                    }
+
+                    // 2. Create Card
+                    const card = document.createElement('div');
+                    card.className = "glass-panel rounded-2xl overflow-hidden animate-slide-up group";
+                    card.style.animationDelay = `${index * 50}ms`;
+
+                    // 3. Header
+                    const isSafetyBlock = plan.id === 'm-safe';
+                    const numberDisplay = isSafetyBlock ? '<i class="fas fa-shield-alt text-emerald-400"></i>' : index + 1;
+                    
+                    const header = document.createElement('div');
+                    header.className = "p-5 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors select-none";
+                    header.setAttribute('role', 'button');
+                    header.setAttribute('aria-expanded', 'false');
+                    header.setAttribute('aria-controls', `content-${plan.id}`);
+                    
+                    header.innerHTML = `
+                        <div class="flex items-center gap-5">
+                            <div class="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold text-white shadow-inner relative overflow-hidden">
+                                <span class="relative z-10">${numberDisplay}</span>
+                                <div class="absolute inset-0 ${isSafetyBlock ? 'bg-emerald-500/10' : 'bg-indigo-500/10'} blur-md"></div>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white">${plan.month}</h3>
+                                <p class="${isSafetyBlock ? 'text-emerald-300' : 'text-indigo-300'} text-xs font-medium uppercase tracking-wide">${plan.title}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span id="summary-${plan.id}" class="hidden md:inline-block text-xs font-mono font-bold text-slate-500 bg-black/20 px-2 py-1 rounded"></span>
+                            <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-slate-400 transition-transform duration-300 icon-chevron">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                    `;
+
+                    // 4. Content Body
+                    const bodyWrapper = document.createElement('div');
+                    bodyWrapper.className = "accordion-content bg-black/20";
+                    bodyWrapper.id = `content-${plan.id}`;
+                    
+                    const inner = document.createElement('div');
+                    inner.className = "accordion-inner";
+
+                    if (plan.isContent) {
+                        inner.innerHTML = `<div class="p-6 text-slate-300 italic border-t border-white/5 leading-relaxed">${plan.content}</div>`;
+                    } else {
+                        // Render Checkboxes
+                        const grid = document.createElement('div');
+                        grid.className = "grid grid-cols-1 md:grid-cols-3 gap-8 p-6 border-t border-white/5";
+
+                        const subjects = [
+                            { key: 'Physics', color: 'text-blue-400' }, 
+                            { key: 'Chemistry', color: 'text-emerald-400' }, 
+                            { key: 'Mathematics', color: 'text-rose-400' }
+                        ];
+
+                        subjects.forEach(subj => {
+                            if (!plan.chapters[subj.key]) return;
+
+                            const col = document.createElement('div');
+                            col.innerHTML = `<h4 class="font-bold text-xs uppercase tracking-wider ${subj.color} mb-4 border-b border-white/5 pb-2">${subj.key}</h4>`;
+                            const ul = document.createElement('ul');
+                            ul.className = "space-y-4";
+
+                            plan.chapters[subj.key].forEach(chap => {
+                                const chapId = generateId(plan.id, subj.key, chap);
+                                const isChecked = state.progress[chapId] || false;
+                                
+                                const li = document.createElement('li');
+                                li.className = "flex items-start gap-3 relative group/item";
+
+                                // Badge Logic: Apply to everything EXCEPT Safety Buffer (m-safe)
+                                let badge = '';
+                                if (plan.id !== 'm-safe') {
+                                    badge = `<span class="text-[10px] text-yellow-500 font-bold inline-flex items-center mt-1 glow-text"><i class="fas fa-star mr-1 text-[8px]"></i>High Yield</span>`;
+                                }
+
+                                li.innerHTML = `
+                                    <label class="custom-checkbox relative flex items-center cursor-pointer pt-0.5">
+                                        <input type="checkbox" class="sr-only" data-id="${chapId}" ${isChecked ? 'checked' : ''}>
+                                        <div class="w-5 h-5 rounded border border-slate-600 bg-slate-800/50 flex items-center justify-center transition-all hover:border-indigo-500">
+                                            <svg class="w-3.5 h-3.5 text-white stroke-current stroke-2" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
+                                        </div>
+                                    </label>
+                                    <div class="flex-grow">
+                                        <span class="text-sm text-slate-300 block leading-tight cursor-pointer hover:text-white transition-colors select-none" onclick="this.parentElement.previousElementSibling.click()">
+                                            ${chap}
+                                        </span>
+                                        ${badge}
+                                    </div>
+                                `;
+                                
+                                // Event Listener for Checkbox
+                                const checkbox = li.querySelector('input');
+                                checkbox.addEventListener('change', (e) => {
+                                    toggleChapter(chapId, e.target.checked);
+                                    if (e.target.checked) triggerConfetti();
+                                });
+
+                                ul.appendChild(li);
+                            });
+                            col.appendChild(ul);
+                            grid.appendChild(col);
+                        });
+                        inner.appendChild(grid);
+                    }
+
+                    // 5. Notes Section (Securely Implemented)
+                    const noteSection = document.createElement('div');
+                    noteSection.className = "px-6 pb-6 pt-2";
+                    
+                    const noteLabel = document.createElement('div');
+                    noteLabel.className = "flex items-center gap-2 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider";
+                    noteLabel.innerHTML = '<i class="fas fa-sticky-note"></i> Personal Notes';
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.className = "w-full bg-slate-900/50 border border-white/10 rounded-xl p-4 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all resize-none h-24 placeholder:text-slate-600";
+                    textarea.placeholder = "Jot down formulas, weak areas, or mock scores...";
+                    // SECURITY FIX: Set value via property, not HTML attribute
+                    textarea.value = state.notes[plan.id] || ""; 
+                    
+                    textarea.addEventListener('input', (e) => {
+                        state.notes[plan.id] = e.target.value;
+                        saveState(); // Auto-save
+                    });
+
+                    noteSection.appendChild(noteLabel);
+                    noteSection.appendChild(textarea);
+                    inner.appendChild(noteSection);
+
+                    // Assemble
+                    bodyWrapper.appendChild(inner);
+                    card.appendChild(header);
+                    card.appendChild(bodyWrapper);
+                    UI.timeline.appendChild(card);
+
+                    // Accordion Click Handler
+                    header.addEventListener('click', () => {
+                        const isOpen = bodyWrapper.classList.contains('open');
+                        bodyWrapper.classList.toggle('open');
+                        const icon = header.querySelector('.icon-chevron');
+                        icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                        header.setAttribute('aria-expanded', !isOpen);
+                    });
+                });
+            }
+
+            function toggleChapter(id, checked) {
+                if (checked) {
+                    state.progress[id] = true;
+                } else {
+                    delete state.progress[id];
+                }
+                saveState();
+            }
+
+            function updateStats() {
+                let total = 0, done = 0;
+                const subjStats = { Physics: {t:0, d:0}, Chemistry: {t:0, d:0}, Mathematics: {t:0, d:0} };
+
+                // Calculate global stats
+                DATA.forEach(plan => {
+                    if (!plan.chapters) return;
+
+                    let monthlyTotal = 0;
+                    let monthlyDone = 0;
+
+                    Object.keys(plan.chapters).forEach(subj => {
+                        plan.chapters[subj].forEach(chap => {
+                            total++;
+                            subjStats[subj].t++;
+                            const id = generateId(plan.id, subj, chap);
+                            const isDone = !!state.progress[id];
+                            
+                            monthlyTotal++;
+                            if (isDone) {
+                                done++;
+                                subjStats[subj].d++;
+                                monthlyDone++;
+                            }
+                        });
+                    });
+
+                    // Update Card Summary (safely)
+                    const sumEl = document.getElementById(`summary-${plan.id}`);
+                    if (sumEl) {
+                        sumEl.textContent = `${monthlyDone}/${monthlyTotal}`;
+                        if (monthlyDone === monthlyTotal && monthlyTotal > 0) {
+                            sumEl.classList.add('text-emerald-400');
+                            sumEl.classList.remove('text-slate-500');
+                        } else {
+                            sumEl.classList.remove('text-emerald-400');
+                            sumEl.classList.add('text-slate-500');
+                        }
+                    }
+                });
+
+                // Helper for UI updates
+                const updateBar = (barEl, textEl, current, max) => {
+                    const pct = max === 0 ? 0 : Math.round((current / max) * 100);
+                    if (textEl) textEl.textContent = `${pct}%`;
+                    if (barEl) barEl.style.width = `${pct}%`;
+                };
+
+                updateBar(UI.stats.bar, UI.stats.total, done, total);
+                UI.stats.ratio.textContent = `${done}/${total} Chapters`;
+                
+                updateBar(UI.stats.barPhy, UI.stats.phy, subjStats.Physics.d, subjStats.Physics.t);
+                updateBar(UI.stats.barChem, UI.stats.chem, subjStats.Chemistry.d, subjStats.Chemistry.t);
+                updateBar(UI.stats.barMath, UI.stats.math, subjStats.Mathematics.d, subjStats.Mathematics.t);
+            }
+
+            function triggerConfetti() {
+                confetti({
+                    particleCount: 80,
+                    spread: 60,
+                    origin: { y: 0.7 },
+                    colors: ['#818cf8', '#e879f9', '#34d399'],
+                    disableForReducedMotion: true,
+                    scalar: 0.8
+                });
+            }
+
+            function startCountdown() {
+                const tick = () => {
+                    const now = new Date().getTime();
+                    const dist = state.targetDate - now;
+
+                    if (dist < 0) {
+                        UI.countdown.innerText = "Exam Day!";
+                        UI.countdown.className = "text-2xl font-bold font-mono text-emerald-400 mt-1";
+                        return;
+                    }
+
+                    const days = Math.floor(dist / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    UI.countdown.innerText = `${days}d ${hours}h`;
+                };
+                
+                tick();
+                setInterval(tick, 60000); // Update every minute
+            }
+
+            function setupEventListeners() {
+                // Modal Triggers
+                document.getElementById('countdown-btn').addEventListener('click', Modal.open);
+                document.getElementById('btn-reset').addEventListener('click', () => {
+                    document.getElementById('modal-confirm').classList.remove('hidden');
+                });
+                
+                document.getElementById('btn-cancel-reset').addEventListener('click', () => {
+                    document.getElementById('modal-confirm').classList.add('hidden');
+                });
+
+                document.getElementById('btn-confirm-reset').addEventListener('click', () => {
+                    localStorage.removeItem(CONSTANTS.STORAGE_KEY);
+                    location.reload();
+                });
+
+                // Export
+                document.getElementById('btn-export').addEventListener('click', () => {
+                    const str = JSON.stringify(state, null, 2);
+                    const blob = new Blob([str], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `jee-strategy-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    Toast.show("Exported successfully!");
+                });
+
+                // Import
+                const fileInput = document.getElementById('file-import');
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const json = JSON.parse(ev.target.result);
+                            if (json && typeof json === 'object') {
+                                // Basic validation
+                                if(json.progress || json.notes) {
+                                    state = { ...state, ...json };
+                                    saveState();
+                                    location.reload();
+                                } else {
+                                    throw new Error("Invalid format");
+                                }
+                            }
+                        } catch (err) {
+                            Toast.show("Invalid file format", "error");
+                        }
+                    };
+                    reader.readAsText(file);
+                    // Reset input so same file can be selected again
+                    fileInput.value = '';
+                });
+            }
+
+            // Expose public method to update target date from Modal
+            return {
+                init,
+                setTargetDate: (timestamp) => {
+                    state.targetDate = timestamp;
+                    saveState();
+                    startCountdown();
+                },
+                getTargetDate: () => state.targetDate
+            };
+        })();
+
+        // --- CALENDAR MODAL ---
+        const Modal = (() => {
+            const els = {
+                modal: document.getElementById('modal-calendar'),
+                backdrop: document.getElementById('modal-backdrop'),
+                content: document.getElementById('modal-content'),
+                title: document.getElementById('cal-title'),
+                grid: document.getElementById('cal-grid'),
+                header: document.getElementById('cal-header'),
+                prev: document.getElementById('cal-prev'),
+                next: document.getElementById('cal-next'),
+                actions: document.getElementById('cal-actions'),
+                empty: document.getElementById('cal-empty'),
+                selText: document.getElementById('cal-selected-text'),
+                badge: document.getElementById('cal-badge'),
+                saveBtn: document.getElementById('cal-save-btn')
+            };
+
+            let viewDate = new Date();
+            let selectedDate = null;
+
+            function open() {
+                els.modal.classList.remove('hidden');
+                // Use double RAF for simple transition
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        els.backdrop.classList.remove('opacity-0');
+                        els.content.classList.remove('opacity-0', 'scale-95');
+                        els.content.classList.add('scale-100');
+                    });
+                });
+
+                const currentTarget = App.getTargetDate();
+                if (currentTarget) {
+                    selectedDate = new Date(currentTarget);
+                    viewDate = new Date(currentTarget);
+                }
+                render();
+            }
+
+            function close() {
+                els.backdrop.classList.add('opacity-0');
+                els.content.classList.remove('scale-100');
+                els.content.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    els.modal.classList.add('hidden');
+                }, 300);
+            }
+
+            function render() {
+                const year = viewDate.getFullYear();
+                const month = viewDate.getMonth();
+
+                els.title.innerHTML = `${CONSTANTS.MONTHS[month]} <span class="font-light opacity-50 text-base ml-1">${year}</span>`;
+                els.header.innerHTML = CONSTANTS.DAYS.map(d => `<div>${d}</div>`).join('');
+                els.grid.innerHTML = '';
+
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                // Empty slots
+                for(let i=0; i<firstDay; i++) els.grid.appendChild(document.createElement('div'));
+
+                const today = new Date();
+                today.setHours(0,0,0,0);
+
+                for(let i=1; i<=daysInMonth; i++) {
+                    const date = new Date(year, month, i);
+                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                    const isToday = date.toDateString() === today.toDateString();
+
+                    const btn = document.createElement('button');
+                    btn.textContent = i;
+                    let classes = "w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200 relative ";
+                    
+                    if(isSelected) {
+                        classes += "bg-indigo-600 text-white shadow-lg shadow-indigo-500/50 scale-110 z-10";
+                    } else if(isToday) {
+                        classes += "bg-slate-700 text-indigo-300 font-bold border border-indigo-500/30";
+                    } else {
+                        classes += "text-slate-400 hover:bg-white/10 hover:text-white";
+                    }
+
+                    btn.className = classes;
+                    btn.onclick = () => {
+                        selectedDate = date;
+                        render(); // Re-render to show selection
+                        updateInfo();
+                    };
+                    els.grid.appendChild(btn);
+                }
+
+                updateInfo();
+            }
+
+            function updateInfo() {
+                if (!selectedDate) {
+                    els.actions.classList.add('hidden');
+                    els.empty.classList.remove('hidden');
+                    return;
+                }
+
+                els.empty.classList.add('hidden');
+                els.actions.classList.remove('hidden');
+
+                els.selText.textContent = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+
+                const now = new Date();
+                now.setHours(0,0,0,0);
+                const selectedMidnight = new Date(selectedDate);
+                selectedMidnight.setHours(0,0,0,0);
+                
+                const diff = Math.ceil((selectedMidnight - now) / (1000 * 60 * 60 * 24));
+
+                if(diff < 0) { 
+                    els.badge.textContent = "Past Date"; 
+                    els.badge.className = "text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-bold"; 
+                } else if(diff === 0) { 
+                    els.badge.textContent = "Today"; 
+                    els.badge.className = "text-xs px-2 py-1 rounded bg-orange-500/20 text-orange-400 font-bold"; 
+                } else { 
+                    els.badge.textContent = `${diff} Days Left`; 
+                    els.badge.className = "text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-bold"; 
+                }
+            }
+
+            // Listeners
+            els.prev.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() - 1); render(); });
+            els.next.addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() + 1); render(); });
+            els.backdrop.addEventListener('click', close);
+            els.saveBtn.addEventListener('click', () => {
+                if(selectedDate) {
+                    selectedDate.setHours(9,0,0,0); // Set to 9 AM of selected day
+                    App.setTargetDate(selectedDate.getTime());
+                    close();
+                    Toast.show("Target date updated!");
+                }
+            });
+
+            return { open };
+        })();
+
+        // --- TOAST NOTIFICATIONS ---
+        const Toast = {
+            show(msg, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const el = document.createElement('div');
+                const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+                const color = type === 'success' ? 'text-emerald-400' : 'text-rose-400';
+                
+                el.className = "toast-enter glass-panel px-4 py-3 rounded-xl flex items-center gap-3 shadow-xl border-l-4 " + (type === 'success' ? "border-l-emerald-500" : "border-l-rose-500");
+                el.innerHTML = `
+                    <i class="fas fa-${icon} ${color} text-lg"></i>
+                    <span class="text-sm font-medium text-white">${msg}</span>
+                `;
+                
+                container.appendChild(el);
+                
+                setTimeout(() => {
+                    el.classList.remove('toast-enter');
+                    el.classList.add('toast-exit');
+                    setTimeout(() => el.remove(), 300);
+                }, 3000);
+            }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', App.init);
+
+    </script>
+</body>
+</html>
